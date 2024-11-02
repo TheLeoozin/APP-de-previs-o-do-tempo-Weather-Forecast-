@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Weather Forecast App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: WeatherScreen(),
+    );
+  }
+}
+
+class WeatherScreen extends StatefulWidget {
+  @override
+  _WeatherScreenState createState() => _WeatherScreenState();
+}
+
+class _WeatherScreenState extends State<WeatherScreen> {
+  String _cityName = '';
+  String _weatherDescription = '';
+  double _temperature = 0;
+  String _iconUrl = '';
+
+  final _cityController = TextEditingController();
+
+  Future<void> fetchWeatherData(String cityName) async {
+    final apiKey = 'SUA_CHAVE_DE_API'; // Substitua pela sua chave de API da OpenWeatherMap
+    final url = Uri.parse(
+      'https://api.openweathermap.org/data/2.5/weather?q=$cityName&appid=$apiKey&units=metric',
+    );
+
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        _cityName = data['name'];
+        _weatherDescription = data['weather'][0]['description'];
+        _temperature = data['main']['temp'];
+        _iconUrl = 'http://openweathermap.org/img/w/${data['weather'][0]['icon']}.png';
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao buscar dados do tempo')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Weather Forecast'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _cityController,
+              decoration: InputDecoration(
+                labelText: 'Digite o nome da cidade',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                fetchWeatherData(_cityController.text);
+              },
+              child: Text('Buscar Previsão'),
+            ),
+            SizedBox(height: 20),
+            if (_cityName.isNotEmpty)
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Cidade: $_cityName',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 10),
+                      Image.network(_iconUrl),
+                      SizedBox(height: 10),
+                      Text(
+                        'Descrição: $_weatherDescription',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      Text(
+                        'Temperatura: ${_temperature.toStringAsFixed(1)} °C',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
